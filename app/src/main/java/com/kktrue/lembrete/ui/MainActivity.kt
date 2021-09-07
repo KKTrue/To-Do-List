@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.kktrue.lembrete.databinding.ActivityMainBinding
 import com.kktrue.lembrete.datasource.TaskDataSource
@@ -12,6 +13,11 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val adapter by lazy { TaskListAdapter() }
+
+    private val register =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == Activity.RESULT_OK) updateList()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,36 +32,27 @@ class MainActivity : AppCompatActivity() {
 
     private fun insertListeners() {
         binding.fab.setOnClickListener {
-            startActivityForResult(Intent(this, AddTaskActivity::class.java), CREAT_NEW_TASK)
+            register.launch(Intent(this, AddTaskActivity::class.java))
         }
 
         adapter.listenerEdit = {
             val intent = Intent(this, AddTaskActivity::class.java)
             intent.putExtra(AddTaskActivity.TASK_ID, it.id)
-            startActivityForResult(intent, CREAT_NEW_TASK)
+            register.launch(intent)
         }
 
         adapter.listenerDelete = {
             TaskDataSource.deleteTask(it)
             updateList()
         }
-
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == CREAT_NEW_TASK && resultCode == Activity.RESULT_OK) updateList()
     }
 
     private fun updateList() {
         val list = TaskDataSource.getList()
-        binding.includeEmpty.emptyState.visibility = if (list.isEmpty()) View.VISIBLE
+        binding.includeEmpty.emptyState.visibility = if
+                (list.isEmpty()) View.VISIBLE
         else View.GONE
 
         adapter.submitList(list)
-    }
-
-    companion object {
-        private const val CREAT_NEW_TASK = 1000
     }
 }
